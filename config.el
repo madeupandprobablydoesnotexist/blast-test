@@ -1,0 +1,1027 @@
+;;; config.el -*- lexical-binding: t; -*-
+
+;; Speed improvements
+(use-package! gcmh
+  :init
+  (setq gcmh-idle-delay 5
+        gcmh-high-cons-threshold (* 256 1024 1024))  ; 256MB during idle
+  :config
+  (gcmh-mode 1))
+
+(setq gc-cons-threshold 200000000)
+
+;; Basic settings
+(setq user-full-name "Michael Neuper"
+      user-mail-address "michael@michaelneuper.com")
+
+(setq auto-save-default t
+      make-backup-files t)
+
+(setq confirm-kill-emacs nil)
+
+(setq doom-localleader-key "SPC l"
+      doom-localleader-alt-key "M-SPC l")
+
+(use-package! which-key
+  :init
+  (setq which-key-idle-delay 0.5
+        which-key-allow-multiple-replacements t)
+  :config
+  (which-key-mode 1)
+
+  (pushnew!
+   which-key-replacement-alist
+   '(("" . "\\`+?evil[-:]?\\(?:a-\\)?\\(.*\\)") . (nil . "◂\\1"))
+   '(("\\`g s" . "\\`evilem--?motion-\\(.*\\)") . (nil . "◃\\1"))
+   '(("" . "\\`+?magit[-:]?\\(?:a-\\)?\\(.*\\)") . (nil . "\\1")))
+
+;; Linux key remapping
+(map! :nvi "M-v" #'yank)
+
+;; Visual enhancements: Fonts (Linux-only)
+(defconst my/serif-font "Latin Modern Roman")
+(defconst my/sans-serif-font "Inter")
+(defconst my/mono-font "JetBrainsMono Nerd Font")
+
+(setq doom-theme 'doom-gruvbox
+      doom-gruvbox-dark-variant "medium"
+      doom-gruvbox-padded-modeline t)
+
+(setq doom-font (font-spec :family my/mono-font :size 15)
+      doom-variable-pitch-font (font-spec :family my/serif-font)
+      doom-emoji-font (font-spec :family "Apple Color Emoji"))
+
+(after! nerd-icons
+  (dolist (entry
+           '(("s"     nerd-icons-sucicon "nf-seti-asm"         :face nerd-icons-blue)
+             ("o"     nerd-icons-codicon "nf-cod-file_binary"  :face nerd-icons-orange)
+             ("class" nerd-icons-codicon "nf-cod-file_binary"  :face nerd-icons-orange)
+             ("vim"   nerd-icons-devicon "nf-dev-vim"          :face default)
+             ("ms"    nerd-icons-mdicon  "nf-md-file_document" :face nerd-icons-silver)
+             ("1"     nerd-icons-mdicon  "nf-md-file_document" :face nerd-icons-silver)
+             ("ps"    nerd-icons-mdicon  "nf-md-vector_curve"  :face nerd-icons-dred)
+             ("typ"   nerd-icons-flicon  "nf-linux-typst"      :face nerd-icons-dblue)))
+    (add-to-list 'nerd-icons-extension-icon-alist entry)))
+
+(custom-theme-set-faces! 'doom-gruvbox
+  `(font-lock-escape-face :foreground ,(doom-color 'orange)))
+
+(custom-set-faces!
+  `(font-lock-doc-face
+    :foreground ,(face-attribute 'font-lock-comment-face :foreground))
+  `(hexl-address-region :font ,my/mono-font)
+  `(hexl-ascii-region
+    :background ,(doom-color 'bg-alt)
+    :foreground ,(doom-color 'fg-alt)))
+
+;; Line numbers
+(setq display-line-numbers-type 'visual)
+
+(add-hook! 'display-line-numbers-mode-hook
+  (custom-set-faces!
+    '((line-number line-number-current-line)
+      :slant normal)
+    `(line-number-current-line
+      :background ,(face-attribute 'line-number :background)
+      :foreground ,(doom-color 'fg))))
+
+(setq global-hl-line-modes '(prog-mode dired-mode))
+
+;; Window settings
+(add-to-list 'default-frame-alist '(width . 100))
+(add-to-list 'default-frame-alist '(height . 40))
+
+(setq frame-title-format "GNU Emacs")
+
+;; Doom modules: :completion
+(after! corfu
+  (setq corfu-auto nil
+        corfu-preselect 'first
+        corfu-preview-current nil
+        +corfu-want-tab-prefer-expand-snippets t))
+
+;; Doom modules: :ui
+(use-package! deft
+  :after org-roam
+  :config
+  (setq deft-recursive t
+        deft-use-filter-string-for-filename t
+        deft-default-extension "org"
+        deft-directory org-roam-directory)
+
+  (map! :leader :desc "Search with deft" "r s" #'deft))
+
+(remove-hook! '+doom-dashboard-functions
+  #'doom-dashboard-widget-shortmenu
+  #'doom-dashboard-widget-footer)
+
+(add-hook! '+doom-dashboard-functions :append
+  (let* ((icon (propertize
+                #(" " 0 1 (display (height 1.5)))
+                'face `(:foreground ,(doom-color 'magenta))))
+         (msg  (nth (random (length my/dashboard-footer-messages))
+                    my/dashboard-footer-messages))
+         (line (concat icon msg)))
+    (insert "\n" (+doom-dashboard--center +doom-dashboard--width line) "\n"))
+
+      (setq mode-line-format nil))
+
+(setq-hook! '+doom-dashboard-mode-hook
+   evil-normal-state-cursor (list nil))
+
+(defun my-weebery-is-always-greater ()
+  (let* ((banner '("⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡀⠀⠀⠀⠀⠀⠀⡀⠀⠀⠀⠀⠀⠀⠀⠀"
+                   "⢸⠉⣹⠋⠉⢉⡟⢩⢋⠋⣽⡻⠭⢽⢉⠯⠭⠭⠭⢽⡍⢹⡍⠙⣯⠉⠉⠉⠉⠉⣿⢫⠉⠉⠉⢉⡟⠉⢿⢹⠉⢉⣉⢿⡝⡉⢩⢿⣻⢍⠉⠉⠩⢹⣟⡏⠉⠹⡉⢻⡍⡇"
+                   "⢸⢠⢹⠀⠀⢸⠁⣼⠀⣼⡝⠀⠀⢸⠘⠀⠀⠀⠀⠈⢿⠀⡟⡄⠹⣣⠀⠀⠐⠀⢸⡘⡄⣤⠀⡼⠁⠀⢺⡘⠉⠀⠀⠀⠫⣪⣌⡌⢳⡻⣦⠀⠀⢃⡽⡼⡀⠀⢣⢸⠸⡇"
+                   "⢸⡸⢸⠀⠀⣿⠀⣇⢠⡿⠀⠀⠀⠸⡇⠀⠀⠀⠀⠀⠘⢇⠸⠘⡀⠻⣇⠀⠀⠄⠀⡇⢣⢛⠀⡇⠀⠀⣸⠇⠀⠀⠀⠀⠀⠘⠄⢻⡀⠻⣻⣧⠀⠀⠃⢧⡇⠀⢸⢸⡇⡇"
+                   "⢸⡇⢸⣠⠀⣿⢠⣿⡾⠁⠀⢀⡀⠤⢇⣀⣐⣀⠀⠤⢀⠈⠢⡡⡈⢦⡙⣷⡀⠀⠀⢿⠈⢻⣡⠁⠀⢀⠏⠀⠀⠀⢀⠀⠄⣀⣐⣀⣙⠢⡌⣻⣷⡀⢹⢸⡅⠀⢸⠸⡇⡇"
+                   "⢸⡇⢸⣟⠀⢿⢸⡿⠀⣀⣶⣷⣾⡿⠿⣿⣿⣿⣿⣿⣶⣬⡀⠐⠰⣄⠙⠪⣻⣦⡀⠘⣧⠀⠙⠄⠀⠀⠀⠀⣨⣴⣾⣿⠿⣿⣿⣿⣿⣿⣶⣯⣿⣼⢼⡇⠀⢸⡇⡇⠇"
+                   "⢸⢧⠀⣿⡅⢸⣼⡷⣾⣿⡟⠋⣿⠓⢲⣿⣿⣿⡟⠙⣿⠛⢯⡳⡀⠈⠓⠄⡈⠚⠿⣧⣌⢧⠀⠀⠀⠀⠀⣠⣺⠟⢫⡿⠓⢺⣿⣿⣿⠏⠙⣏⠛⣿⣿⣾⡇⢀⡿⢠⠀⡇"
+                   "⢸⢸⠀⢹⣷⡀⢿⡁⠀⠻⣇⠀⣇⠀⠘⣿⣿⡿⠁⠐⣉⡀⠀⠁⠀⠀⠀⠀⠀⠀⠀⠀⠉⠓⠳⠄⠀⠀⠀⠀⠋⠀⠘⡇⠀⠸⣿⣿⠟⠀⢈⣉⢠⡿⠁⣼⠁⣼⠃⣼⠀⡇"
+                   "⢸⠸⣀⠈⣯⢳⡘⣇⠀⠀⠈⡂⣜⣆⡀⠀⠀⢀⣀⡴⠇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢽⣆⣀⠀⠀⠀⣀⣜⠕⡊⠀⣸⠇⣼⡟⢠⠏⠀⡇"
+                   "⢸⠀⡟⠀⢸⡆⢹⡜⡆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⠋⣾⡏⡇⡎⡇⠀⡇"
+                   "⢸⠀⢃⡆⠀⢿⡄⠑⢽⣄⠀⠀⠀⢀⠂⠠⢁⠈⠄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠠⠂⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡀⠀⠄⡐⢀⠂⠀⠀⣠⣮⡟⢹⣯⣸⣱⠁⠀⡇"
+                   "⠈⠉⠉⠉⠉⠉⠉⠉⠉⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠉⠉⠉⠉⠉⠉⠉⠉⠁"))
+         (longest-line (apply #'max (mapcar #'length banner))))
+    (put-text-property
+     (point)
+     (dolist (line banner (point))
+       (insert (+doom-dashboard--center
+                +doom-dashboard--width
+                (concat line (make-string (max 0 (- longest-line (length line))) 32)))
+               "\n"))
+     'face 'doom-dashboard-banner)))
+
+(setq +doom-dashboard-ascii-banner-fn #'my-weebery-is-always-greater
+      fancy-splash-image (file-name-concat doom-private-dir "images/logo.svg"))
+
+(after! indent-bars
+  (setq indent-bars-display-on-blank-lines nil))
+
+(remove-hook 'doom-modeline-mode-hook #'size-indication-mode)
+
+(after! doom-modeline
+  (setq doom-modeline-buffer-file-name-style 'auto
+        doom-modeline-always-show-macro-register t
+        doom-modeline-enable-word-count nil
+        doom-modeline-buffer-encoding t
+        doom-modeline-major-mode-icon t
+        doom-modeline-buffer-modification-icon nil
+        doom-modeline-bar-width 0
+        doom-modeline-height 30
+        doom-modeline-modal nil
+        doom-modeline-spc-face-overrides `(:family ,my/mono-font))
+
+  (setq mode-line-right-align-edge 'right-fringe)
+
+  (custom-set-faces!
+    `(doom-modeline-buffer-file
+      :foreground ,(doom-color 'fg-alt)
+      :family ,my/sans-serif-font)
+    `(mode-line
+      :background ,(doom-color 'bg)
+      :foreground ,(doom-color 'fg-alt)
+      :overline ,(doom-color 'base4)
+      :family ,my/sans-serif-font)
+    `(mode-line-inactive
+      :overline ,(doom-color 'base4)
+      :family ,my/sans-serif-font
+      :box nil)
+    `(mode-line-active
+      :foreground ,(doom-color 'fg-alt)
+      :box nil)
+    '(header-line
+      :overline nil))
+
+  ;; Terminal-specific modeline tweaks
+  (unless (display-graphic-p)
+    (setq doom-modeline-icon nil)
+
+    (custom-set-faces!
+    `(mode-line
+      :background ,(doom-color 'bg-alt2)
+      :foreground ,(doom-color 'fg))
+    '(doom-modeline-buffer-file
+      :weight normal)))
+
+  (map! :leader :desc "Mode line" "t m" #'global-hide-mode-line-mode))
+
+(defun doom-modeline-conditional-buffer-encoding ()
+  "We expect the encoding to be LF UTF-8, so only show the modeline when this is not the case"
+  (setq-local doom-modeline-buffer-encoding
+              (unless (and (memq (plist-get (coding-system-plist buffer-file-coding-system) :category)
+                                 '(coding-category-undecided coding-category-utf-8))
+                           (not (memq (coding-system-eol-type buffer-file-coding-system) '(1 2))))
+                t)))
+
+(add-hook 'after-change-major-mode-hook #'doom-modeline-conditional-buffer-encoding)
+
+(use-package! centaur-tabs
+  :init
+  (remove-hook 'doom-first-file-hook #'centaur-tabs-mode)
+  (when (daemonp)
+    (remove-hook 'server-after-make-frame-hook #'centaur-tabs-mode))
+
+  (map! :leader
+        :prefix "t"
+        :desc "Tabs"       "t" #'centaur-tabs-mode
+        :desc "Local tabs" "T" #'centaur-tabs-local-mode)
+  :config
+  (centaur-tabs-change-fonts my/sans-serif-font 140)
+  :bind
+  (:map evil-normal-state-map
+        ("g t" . centaur-tabs-forward)
+        ("g T" . centaur-tabs-backward)))
+
+(use-package! mixed-pitch
+  :hook ((org-mode           . mixed-pitch-mode)
+         (org-roam-mode      . mixed-pitch-mode)
+         (doom-docs-org-mode . mixed-pitch-mode))
+  :config
+  (setq mixed-pitch-set-height t
+        variable-pitch-serif-font doom-variable-pitch-font)
+
+  (pushnew! mixed-pitch-fixed-pitch-faces
+            'warning
+            'org-drawer 'org-cite-key 'org-list-dt 'org-hide
+            'corfu-default 'font-latex-math-face)
+
+  (set-face-attribute 'variable-pitch nil :height 1.1)
+
+  (map! :leader :desc "Mixed pitch" "t M" #'mixed-pitch-mode))
+
+(defadvice! +org-indent--reduced-text-prefixes ()
+  :after #'org-indent--compute-prefixes
+  (setq org-indent--text-line-prefixes
+        (make-vector org-indent--deepest-level nil))
+  (when (> org-indent-indentation-per-level 0)
+    (dotimes (n org-indent--deepest-level)
+      (aset org-indent--text-line-prefixes
+            n
+            (org-add-props
+                (concat (make-string (* n (1- org-indent-indentation-per-level))
+                                     ?\s)
+                        (if (> n 0)
+                             (char-to-string org-indent-boundary-char)
+                          "\u200b"))
+                nil 'face 'org-indent)))))
+
+(after! persp-mode
+  (custom-set-faces!
+    `(+workspace-tab-face
+      :family ,my/sans-serif-font)
+    `(+workspace-tab-selected-face
+      :box (:color ,(doom-color 'fg-alt)
+            :line-width 1
+            :style nil)
+      :background ,(doom-color 'fg-alt)
+      :foreground ,(doom-color 'bg-alt)
+      :family ,my/sans-serif-font
+      :weight bold)))
+
+;; Doom modules: :editor
+(after! evil
+  (setq evil-move-cursor-back nil
+        evil-kill-on-visual-paste nil
+        evil-want-fine-undo t
+        evil-move-beyond-eol t
+        +evil-want-o/O-to-continue-comments nil)
+
+  (when (eq doom-theme 'doom-gruvbox)
+          (defconst my/gruvbox-blue "#83a598")
+
+          (setq evil-normal-state-cursor  `(box    ,my/gruvbox-blue)
+                evil-insert-state-cursor  `(bar    ,my/gruvbox-blue)
+                evil-visual-state-cursor  `(hollow ,my/gruvbox-blue)
+                evil-replace-state-cursor `(hbar   ,my/gruvbox-blue)))
+
+  (custom-theme-set-faces! 'doom-gruvbox
+    `(region :background ,(doom-blend (doom-color 'blue) (doom-color 'bg) 0.2)))
+
+  (map! :nv "~" #'repeat
+        :prefix "g"
+        :nv "y" #'evilnc-copy-and-comment-operator
+        :nv "Y" #'+evil:yank-unindented))
+
+(map! :map apheleia-mode-map
+      :leader
+      "fs" #'+format/save-buffer
+      "bs" #'+format/save-buffer-no-reformat)
+
+(defun my/toggle-lispy ()
+  "Toggle lispy-mode: enable if off, disable lispy & lispyville if on."
+  (interactive)
+  (if lispy-mode
+      (progn
+        (lispy-mode -1)
+        (when (bound-and-true-p lispyville-mode)
+          (lispyville-mode -1))
+        (message "Lispy mode disabled"))
+    (lispy-mode 1)
+    (message "Lispy mode enabled")))
+
+(map! :leader :desc "Lispy" "t L" #'my/toggle-lispy)
+
+(use-package! whitespace4r
+  :hook (prog-mode . whitespace4r-mode)
+  :config
+  (custom-set-faces!
+    `((whitespace4r-tab whitespace4r-space whitespace4r-hspace)
+      :background ,(face-attribute 'region :background)
+      :foreground ,(face-attribute 'font-lock-comment-face :foreground))))
+
+;; Doom modules: :emacs
+(defvar my/favorite-dirs
+  '(("h" "~/" "Home")
+    ("c" "~/Developer/" "Code")
+    ("d" "~/Downloads/" "Downloads")
+    ("g" "~/GitHub/" "GitHub")
+    ("t" "~/.Trash/" "Trash")
+    ("o" "~/OneDrive - Stellenbosch University/" "OneDrive")
+    ("u" "/scpx:ubuntu-vm:" "Ubuntu VM")
+    ("n" "/scpx:narga-general:" "NARGA"))
+  "List of favorite directories in the form (KEY PATH LABEL).")
+
+(defun my/open-favorite-dir ()
+  "Prompt with a single key to jump to a favourite directory."
+  (interactive)
+  (let* ((max-label-width
+          (apply #'max
+                 (mapcar (lambda (entry)
+                           (string-width (nth 2 entry)))
+                         my/favorite-dirs)))
+         (prompt
+          (concat
+           (propertize "Select directory:\n" 'face 'bold)
+           (mapconcat
+            (lambda (entry)
+              (let* ((key (car entry))
+                     (label (nth 2 entry))
+                     (path (nth 1 entry))
+                     (padded-label (format (format "%%-%ds" max-label-width) label)))
+                (format
+                 "%s %s  %s"
+                 (propertize key 'face 'success)
+                 (propertize padded-label 'face 'default)
+                 (propertize path 'face 'shadow))))
+            my/favorite-dirs
+            "\n")
+           "\n> "))
+         (key (char-to-string
+               (read-char-choice
+                prompt
+                (mapcar #'string-to-char (mapcar #'car my/favorite-dirs)))))
+         (dir (cadr (assoc key my/favorite-dirs))))
+    (doom-project-browse dir)))
+
+(map! :leader
+      :prefix "f"
+      :desc "Quick Access" "q" #'my/open-favorite-dir
+                           "d" #'consult-dir)
+
+(setq dired-mouse-drag-files t
+      mouse-drag-and-drop-region-cross-program t)
+
+(after! dired-x
+  (setq dired-omit-files
+        (concat dired-omit-files "\\|^\\..*$")))
+
+(after! dirvish
+  (setq dirvish-attributes
+        (append
+         '(vc-state subtree-state nerd-icons collapse)
+         '(git-msg file-size)))
+
+  (setq! dirvish-quick-access-entries my/favorite-dirs))
+
+(map! :leader :desc "Dirvish Quick Access" "o q" #'dirvish-quick-access)
+
+(use-package! blamer
+  :init
+  (map! :leader
+        :desc "Git blame"   "t B" #'blamer-mode
+        :desc "Commit info" "g i" (lambda () (interactive)
+                                    (funcall (if (display-graphic-p)
+                                                #'blamer-show-posframe-commit-info
+                                              #'blamer-show-commit-info))))
+  :config
+  (defun blamer-callback-show-commit-diff (commit-info)
+    (interactive)
+    (let ((commit-hash (plist-get commit-info :commit-hash)))
+      (when commit-hash
+        (magit-show-commit commit-hash))))
+
+  (setq blamer-author-formatter "  %s"
+        blamer-datetime-formatter ", %s"
+        blamer-commit-formatter ""
+        blamer-avatar-folder (file-name-concat doom-cache-dir "blamer/avatars/")
+        blamer-bindings '(("<mouse-1>" . blamer-callback-show-commit-diff))
+        blamer-min-offset 10)
+
+  (custom-set-faces!
+    `(blamer-face
+      :height 0.85
+      :foreground ,(face-attribute 'font-lock-comment-face :foreground)
+      :slant normal)))
+
+;; Doom modules: :term
+(after! eshell
+  (set-eshell-alias!
+   "ll" "ls -lAh $*"
+   "cd" "z $*"
+   "home" "cd ~"
+   "v" "emacs $*"
+   "gs" "git-st"
+   "ga" "git add $1"
+   "gb" "git branch $1"
+   "gbd" "git branch -D $1"
+   "gcb" "git checkout -b $1"
+   "gch" "git checkout $1"
+   "gc" "git commit -m $1"
+   "gp" "git pull"
+   "gpu" "git push")
+
+  (custom-set-faces!
+    `(+eshell-prompt-pwd
+      :foreground ,(doom-color 'teal)
+      :weight bold)
+    `(+eshell-prompt-git-branch
+      :foreground ,(doom-color 'violet)))
+
+  (defun my/+eshell--current-git-branch ()
+    "Return current Git branch prefixed by remote icon, or \"\" if none."
+    (let* ((remote-res    (doom-call-process "git" "ls-remote" "--get-url"))
+           (remote-status (car remote-res))
+           (remote-url    (cdr remote-res))
+
+           (icon
+            (cond
+             ((and (zerop remote-status)
+                   (string-match-p "github"    remote-url)) "")
+             ((and (zerop remote-status)
+                   (string-match-p "gitlab"    remote-url)) "")
+             ((and (zerop remote-status)
+                   (string-match-p "bitbucket" remote-url)) "")
+             ((and (zerop remote-status)
+                   (string-match-p "git"       remote-url)) "")
+             (t                                               "")))
+
+           (branch
+            (cl-destructuring-bind (status . output)
+                (doom-call-process "git" "symbolic-ref" "-q" "--short" "HEAD")
+              (if (zerop status)
+                  output
+                (cl-destructuring-bind (s . o)
+                    (doom-call-process "git" "describe" "--all" "--always" "HEAD")
+                  (if (zerop s) o "")))))
+
+           (p-branch
+            (when (and branch (not (string-empty-p branch)))
+              (concat
+               (propertize (format " at %s on " icon)
+                           'face 'default)
+               (propertize (format " %s" branch)
+                           'face '+eshell-prompt-git-branch)))))
+      (or p-branch "")))
+
+  (defun my/eshell-default-prompt-fn ()
+    (concat (if (bobp) "" "\n")
+            (let ((pwd (eshell/pwd)))
+              (propertize (if (equal pwd "~")
+                              pwd (abbreviate-file-name (shrink-path-file pwd)))
+                          'face '+eshell-prompt-pwd))
+            (my/+eshell--current-git-branch)
+            (propertize "\nλ" 'face (if (zerop eshell-last-command-status) 'success 'error))
+            " "))
+
+  (setq eshell-prompt-function #'my/eshell-default-prompt-fn)
+
+  (defun lem-eshell-prettify (file)
+    "Add features to listings in `eshell/ls' output."
+    (let* ((name (car file))
+           (icon (if (eq (cadr file) t)
+                     (propertize (nerd-icons-icon-for-dir name) 'face 'eshell-ls-directory)
+                   (nerd-icons-icon-for-file name)))
+           (suffix
+            (cond
+             ((eq (cadr file) t) "/")
+             ((and (/= (user-uid) 0)
+                   (eshell-ls-applicable (cdr file) 3 #'file-executable-p (car file)))
+              "*"))))
+      (cons
+       (concat icon " "
+               (propertize name
+                           'keymap eshell-ls-file-keymap
+                           'mouse-face 'highlight
+                           'file-name (expand-file-name (substring-no-properties (car file)) default-directory))
+               (when (and suffix (not (string-suffix-p suffix name)))
+                 (propertize suffix 'face 'shadow)))
+       (cdr file))))
+
+  (defun eshell-ls-file-at-point ()
+    "Get the full path of the Eshell listing at point."
+    (get-text-property (point) 'file-name))
+
+  (defun eshell-ls-find-file ()
+    "Open the Eshell listing at point."
+    (interactive)
+    (find-file (eshell-ls-file-at-point)))
+
+  (defun eshell-ls-delete-file ()
+    "Delete the Eshell listing at point."
+    (interactive)
+    (let ((file (eshell-ls-file-at-point)))
+      (when (yes-or-no-p (format "Delete file %s?" file))
+        (delete-file file 'trash))))
+
+  (defvar eshell-ls-file-keymap
+    (let ((map (make-sparse-keymap)))
+      (define-key map (kbd "RET") #'eshell-ls-find-file)
+      (define-key map (kbd "<return>") #'eshell-ls-find-file)
+      (define-key map [mouse-1] #'eshell-ls-find-file)
+      (define-key map (kbd "D") #'eshell-ls-delete-file)
+      map)
+    "Keys in effect when point is over a file from `eshell/ls'.")
+
+  (advice-add #'eshell-ls-annotate :filter-return #'lem-eshell-prettify)
+
+  (map! :map eshell-mode-map
+        :ni "C-r" #'+eshell/search-history))
+
+(after! vterm
+  (setq vterm-environment '("VTERM=1"))
+
+  (map! :map vterm-mode-map
+        :ni "C-j" #'vterm-send-down
+        :ni "C-k" #'vterm-send-up
+        :i  "C-b" #'backward-char
+        :i  "C-f" #'forward-char))
+
+;; Doom modules: :tools
+(after! dape
+  (setq dape-breakpoint-margin-string "●")
+
+  (custom-set-faces!
+    `(dape-inlay-hint-face :inherit dape-inlay-hint-highlight-face
+      :background ,(face-attribute 'hl-line :background))))
+
+(setq eros-eval-result-prefix "⇒ ")
+
+(after! gptel
+  (setq gptel-model 'gpt-4.1
+        gptel-backend (gptel-make-gh-copilot "Copilot")
+        gptel-default-mode 'org-mode)
+
+  (custom-set-faces!
+    `(gptel-context-highlight-face
+      :background ,(doom-color 'bg-alt))
+    `(gptel-context-deletion-face
+      :inherit diff-removed))
+
+  (map! :map gptel-mode-map
+        :leader
+        :prefix "o l"
+        :desc "Remove all context" "R" #'gptel-context-remove-all))
+
+(after! gptel
+  (gptel-make-tool
+   :function (lambda (command &optional working_dir)
+               (with-temp-message (format "Executing command: `%s`" command)
+                 (let ((default-directory (if (and working_dir (not (string= working_dir "")))
+                                              (expand-file-name working_dir)
+                                            default-directory)))
+                   (shell-command-to-string command))))
+   :name "run_command"
+   :description "Executes a shell command and returns the output as a string. IMPORTANT: This tool allows execution of arbitrary code; user confirmation will be required before any command is run."
+   :args (list
+          '(:name "command"
+            :type string
+            :description "The complete shell command to execute.")
+          '(:name "working_dir"
+            :type string
+            :description "Optional: The directory in which to run the command. Defaults to the current directory if not specified."))
+   :category "command"
+   :confirm t
+   :include t)
+
+  (mapcar (apply-partially #'apply #'gptel-make-tool)
+          (llm-tool-collection-get-all)))
+
+(after! eglot
+  (setq eglot-code-action-indicator "")
+
+  (custom-set-faces!
+    `(eglot-inlay-hint-face
+      :foreground ,(doom-color 'base5)
+      :height 0.9))
+
+  (map! :map eglot-mode-map
+        :leader
+        :desc "Toggle inlay hints" "t h" #'eglot-inlay-hints-mode))
+
+(after! magit
+  (setopt magit-format-file-function #'magit-format-file-nerd-icons)
+
+  (custom-set-faces!
+    '(git-commit-summary :weight bold)))
+
+(add-hook 'pdf-view-mode-hook #'pdf-view-midnight-minor-mode)
+
+(after! pdf-view
+  (setq pdf-view-resize-factor 1.1))
+
+(after! org
+  (setq org-file-apps
+        (append (remove '("\\.pdf\\'" . default) org-file-apps)
+                '(("\\.pdf\\'" . emacs)))))
+
+(map! :map pdf-view-mode-map
+      :localleader
+      (:prefix ("h" . "history")
+       :desc "Go forward in history"  "f" #'pdf-history-forward
+       :desc "Go backward in history" "b" #'pdf-history-backward)
+
+      (:prefix ("a" . "annotations")
+       :desc "Text"      "t" #'pdf-annot-add-text-annotation
+       :desc "Markup"    "m" #'pdf-annot-add-markup-annotation
+       :desc "Highlight" "h" #'pdf-annot-add-highlight-markup-annotation
+       :desc "Strikeout" "s" #'pdf-annot-add-strikeout-markup-annotation))
+
+(after! treesit
+  (setq treesit-font-lock-level 3
+        treesit-auto-install-grammar 'always))
+
+;; Doom modules: :lang
+(after! cc-mode
+  (setf (alist-get 'c-mode c-default-style) "k&r")
+  (setq c-basic-offset 4
+        c-doc-comment-style '((c-mode    . doxygen)
+                              (c-ts-mode . doxygen))
+        whitespace-style '(face trailing lines-tail empty))
+        indent-tabs-mode t)
+
+(add-hook! '(c-mode-common-hook c-ts-mode-hook)
+  (c-setup-doc-comment-style))
+
+(add-hook! '(c-mode-hook c-ts-mode-hook)
+  (unless (or (file-exists-p "makefile")
+              (file-exists-p "Makefile"))
+    (setq-local compile-command "cc -Wall -o main main.c")))
+
+(add-hook! '(c-mode-hook c-ts-mode-hook)
+  (defun +c-hideifdef-init ()
+    "Enable hide-ifdef-mode with shadowing, auto-hiding, and hidden directive lines."
+    (hide-ifdef-mode 1)
+    (setq-local hide-ifdef-shadow t
+                hide-ifdef-initially t
+                hide-ifdef-lines t)
+    (hide-ifdefs)))
+
+(after! eglot
+  (add-hook! 'eglot-managed-mode-hook :append
+    (defun +eglot--rm-eglot--post-self-insert-hook ()
+      (remove-hook 'post-self-insert-hook #'eglot--post-self-insert-hook t))))
+
+(after! java-mode
+  (setq c-basic-offset 2))
+
+(after! eglot
+  (add-to-list 'eglot-server-programs '(python-mode . ("pyright-langserver" "--stdio"))))
+
+(add-hook! 'python-mode-hook
+  (setq python-shell-interpreter "python3.11"
+        doom-modeline-env-python-executable "python3.11"))
+
+(setq TeX-electric-sub-and-superscript t)
+
+(after! cdlatex
+  (setq cdlatex-math-symbol-alist
+        '((?' ("`"))
+          (?e ("\\varepsilon" "\\epsilon"))
+          (?f ("\\varphi" "\\phi"))
+          (?0 ("\\varnothing" "\\emptyset"))
+          (?> ("\\to" "\\implies"))
+          (?= ("\\iff" "\\equiv"))
+          (?| ("\\mid" "\\vert"))
+          (?: ("\\coloneqq")))
+        cdlatex-math-modify-alist
+        '((?b "\\mathbb" nil t nil nil)
+          (?c "\\mathcal" nil t nil nil)
+          (?f "\\mathbf" nil t nil nil)
+          (?m "\\mathrm" nil t nil nil)
+          (?r "\\mathrel" nil t nil nil)
+          (?s "\\mathsf" nil t nil nil)
+          (?o "\\operatorname" nil t nil nil))
+        cdlatex-command-alist
+        '(("eqn" "Insert an EQUATION* environment template" "" cdlatex-environment ("equation*") t nil)
+          ("aln" "Insert an ALIGN* environment template" "" cdlatex-environment ("align*") t nil)
+          ("sum" "Insert \\sum\\limits_{}^{}" "\\sum\\limits_{?}^{}" cdlatex-position-cursor nil nil t)
+          ("prod" "Insert \\prod\\limits_{}^{}" "\\prod\\limits_{?}^{}" cdlatex-position-cursor nil nil t)
+          ("bun" "Insert \\bigcup\\limits_{}^{}" "\\bigcup\\limits_{?}^{}" cdlatex-position-cursor nil nil t)
+          ("bin" "Insert \\bigcap\\limits_{}^{}" "\\bigcap\\limits_{?}^{}" cdlatex-position-cursor nil nil t)
+          ("lim" "Insert \\lim_\\limits{{} \\to {}}" "\\lim_\\limits{{?} \\to {}}" cdlatex-position-cursor nil nil t)
+          ("sr" "Insert {}^2" "{?}^2" cdlatex-position-cursor nil nil t)
+          ("cb" "Insert {}^3" "{?}^3" cdlatex-position-cursor nil nil t)
+          ("op" "Insert \\operatorname{}()" "\\operatorname{?}()" cdlatex-position-cursor nil nil t)))
+
+  (map! :map cdlatex-mode-map
+        :i "TAB" #'cdlatex-tab))
+
+;; Doom modules: :lang org
+(setq org-directory "~/Documents/Org"
+      org-use-property-inheritance t
+      org-startup-with-inline-images t
+      org-edit-src-content-indentation 0)
+
+(after! org
+  (custom-set-faces!
+    `(org-document-title :foreground ,(doom-color 'fg) :height 1.3 :weight bold)
+    `(org-level-1 :inherit 'outline-1 :weight medium   :height 1.1)
+    `(org-level-2 :inherit 'outline-2 :weight medium)
+    `(org-level-3 :inherit 'outline-3 :weight medium)
+    `(org-level-4 :inherit 'outline-4 :weight medium)
+    `(org-level-5 :inherit 'outline-5 :weight medium)))
+
+(defconst my/org-link-colors
+  '(("http"  . blue)
+    ("https" . blue)
+    ("file"  . orange)
+    ("pdf"   . orange)
+    ("id"    . violet))
+  "Alist of Org link prefixes and their Doom theme colours.")
+
+(defun my/org-apply-link-colors ()
+  "Register custom faces for Org link schemes based on `my/org-link-colors'."
+  (dolist (entry my/org-link-colors)
+    (let ((scheme (car entry))
+          (color  (cdr entry)))
+      (org-link-set-parameters
+       scheme
+       :face       `(:foreground ,(doom-color color))
+       :mouse-face `(:foreground ,(doom-color 'bg)
+                     :background ,(doom-color color))))))
+
+(after! org
+  (my/org-apply-link-colors)
+
+  (custom-set-faces!
+    `((org-link)
+      :weight normal
+      :underline nil)))
+
+(defun my/org-fix-filetags ()
+  "Rewrite every `#+filetags:' directive in the current buffer so it uses the
+canonical colon syntax."
+  (interactive)
+  (save-excursion
+    (goto-char (point-min))
+    (while (re-search-forward "^#\\+filetags:\\s-*\\(.*?\\)\\s-*$" nil t)
+      (let* ((line-beg (match-beginning 0))
+             (line-end (match-end 0))
+             (raw      (match-string-no-properties 1))
+             (tags     (split-string raw "[: \t]+" t))
+             (clean    (concat "#+filetags: :"
+                               (string-join tags ":")
+                               ":"
+                               "\n")))
+        (unless (equal (buffer-substring-no-properties line-beg line-end) clean)
+          (goto-char line-beg)
+          (delete-region line-beg line-end)
+          (insert clean))
+        (forward-line 1)))))
+
+(setq org-highlight-latex-and-related '(native script))
+
+(after! org-src
+  (add-to-list 'org-src-block-faces
+               `("latex" (:background ,(doom-color 'bg)
+                          :extend t))))
+
+(add-hook! 'org-src-mode-hook
+  (when (string= major-mode "latex-mode")
+    (evil-tex-mode 1)))
+
+(use-package! org-latex-preview
+  :after org
+  :hook (org-mode . org-latex-preview-mode)
+  :init
+  (setq org-startup-with-latex-preview t)
+
+  (after! org
+    (dolist (pkg '("amsmath" "amssymb" "mathtools" "mathrsfs"))
+      (add-to-list 'org-latex-packages-alist `("" ,pkg t))))
+
+  :config
+  (plist-put org-latex-preview-appearance-options
+             :page-width 1.0)
+
+  (setq org-latex-preview-mode-ignored-commands
+        '(next-line previous-line mwheel-scroll ultra-scroll
+          scroll-up-command scroll-down-command
+          evil-scroll-up evil-scroll-down evil-scroll-line-up evil-scroll-line-down)
+        org-latex-preview-numbered t
+        org-latex-preview-mode-display-live t
+        org-latex-preview-mode-update-delay 0.25)
+
+  (defun my/org-latex-preview-uncenter (ov)
+    (overlay-put ov 'before-string nil))
+  (defun my/org-latex-preview-recenter (ov)
+    (overlay-put ov 'before-string (overlay-get ov 'justify)))
+  (defun my/org-latex-preview-center (ov)
+    (save-excursion
+      (goto-char (overlay-start ov))
+      (when-let* ((elem (org-element-context))
+                  ((or (eq (org-element-type elem) 'latex-environment)
+                       (string-match-p "^\\\\\\[" (org-element-property :value elem))))
+                  (img (overlay-get ov 'display))
+                  (prop `(space :align-to (- center (0.55 . ,img))))
+                  (justify (propertize " " 'display prop 'face 'default)))
+        (overlay-put ov 'justify justify)
+        (overlay-put ov 'before-string (overlay-get ov 'justify)))))
+  (define-minor-mode org-latex-preview-center-mode
+    "Center equations previewed with `org-latex-preview'."
+    :global nil
+    (if org-latex-preview-center-mode
+        (progn
+          (add-hook 'org-latex-preview-overlay-open-functions
+                    #'my/org-latex-preview-uncenter nil :local)
+          (add-hook 'org-latex-preview-overlay-close-functions
+                    #'my/org-latex-preview-recenter nil :local)
+          (add-hook 'org-latex-preview-overlay-update-functions
+                    #'my/org-latex-preview-center nil :local))
+      (remove-hook 'org-latex-preview-overlay-close-functions
+                   #'my/org-latex-preview-recenter)
+      (remove-hook 'org-latex-preview-overlay-update-functions
+                   #'my/org-latex-preview-center)
+      (remove-hook 'org-latex-preview-overlay-open-functions
+                   #'my/org-latex-preview-uncenter))))
+
+(after! org-modern
+  (setq org-auto-align-tags t
+        org-tags-column 0
+        org-fold-catch-invisible-edits 'show-and-error
+        org-special-ctrl-a/e t
+        org-insert-heading-respect-content t
+
+        org-modern-table nil
+        org-modern-todo nil
+        org-modern-priority nil
+        org-modern-progress 6
+
+        org-agenda-tags-column 0
+        org-agenda-block-separator ?─
+        org-agenda-time-grid
+        '((daily today require-timed)
+          (800 1000 1200 1400 1600 1800 2000)
+          " ┄┄┄┄┄ " "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄")
+        org-agenda-current-time-string
+        "⭠ now ─────────────────────────────────────────────────"
+
+        org-modern-fold-stars
+        `(("◉" . "○" )
+          ("◈" . "◇" )
+          ("◉" . "○" )
+          ("◈" . "◇" )
+          ("◉" . "○" ))
+        org-modern-checkbox
+        '((88 . "󰄵")
+          (45 . "󰡖")
+          (32 . "󰄱"))
+        org-modern-list
+        '((43 . "•")
+          (45 . "–")
+          (42 . "↪")))
+
+  (custom-set-faces!
+    `(org-modern-tag
+      :background ,(doom-color 'fg-alt)
+      :foreground ,(doom-color 'bg-alt)
+      :family ,my/sans-serif-font
+      :height 0.7)))
+
+(after! org-appear
+  (setq org-hide-emphasis-markers t
+        org-pretty-entities nil
+        org-appear-autosubmarkers t
+        org-appear-inside-latex t
+        org-appear-autolinks 'just-brackets))
+
+(use-package! org-download
+  :defer t
+  :init
+  (setq-default org-download-image-dir "images")
+  (map! :map org-mode-map
+        :localleader
+        :desc "Rename image at point" "a C" #'org-download-rename-at-point)
+  :config
+  (setq org-download-method 'directory
+        org-download-link-format "[[file:images/%s]]\n"
+        org-download-heading-lvl nil))
+
+(use-package! org-roam
+  :defer t
+  :config
+  (setq org-roam-directory (file-truename "~/Notes")
+        org-roam-db-location (file-truename "~/Notes/org-roam.db")
+        org-attach-id-dir "assets/")
+
+  (org-roam-db-autosync-enable)
+
+  (defun my/org-roam--after-point ()
+    "If in Evil normal state and not at EOL, move one char forward."
+    (when (and (bound-and-true-p evil-mode)
+               (evil-normal-state-p)
+               (not (eolp)))
+      (forward-char)))
+
+  (defun my/current-buffer-has-module-tag ()
+    "Return non-nil when this buffer’s #+filetags line contains :module:."
+    (save-excursion
+      (goto-char (point-min))
+      (re-search-forward "^#\\+filetags:.*:module:" nil t)))
+
+  (defun my/org-roam-insert-lowercase ()
+    "Insert an org-roam link after point.
+   Lower-case the link text unless the current buffer is tagged :module:."
+    (interactive)
+    (let* ((module-context-p (my/current-buffer-has-module-tag))
+           (org-roam-node-formatter
+            (lambda (node)
+              (let ((title (org-roam-node-title node)))
+                (if module-context-p title (downcase title))))))
+      (my/org-roam--after-point)
+      (call-interactively #'org-roam-node-insert)))
+
+  (defun my/org-roam-insert-custom-title ()
+    "Pick a node, then prompt for a verbatim link description."
+    (interactive)
+    (my/org-roam--after-point)
+    (let* ((node (org-roam-node-read))
+           (desc (read-string "Description: "))
+           (link (org-link-make-string
+                  (concat "id:" (org-roam-node-id node))
+                  desc)))
+      (insert link)
+      (org-roam-link-replace-at-point link)
+      (run-hooks 'org-roam-insert-node-hook)
+      (forward-char)))
+
+  (defun my/org-roam-node-find-by-mtime ()
+    "Find a node by last modified date."
+    (interactive)
+    (find-file
+     (org-roam-node-file
+      (org-roam-node-read nil nil #'org-roam-node-read-sort-by-file-mtime))))
+
+  (map! :map org-roam-mode-map
+        :leader
+        (:prefix ("r" . "roam")
+         :desc "Add alias"          "a" #'org-roam-alias-add
+         :desc "Remove alias"       "A" #'org-roam-alias-remove
+         :desc "Toggle roam buffer" "b" #'org-roam-buffer-toggle
+         :desc "Find node"          "f" #'my/org-roam-node-find-by-mtime
+         :desc "Insert node"        "i" #'my/org-roam-insert-lowercase
+         :desc "Insert title"       "I" #'my/org-roam-insert-custom-title
+         :desc "Add tag"            "t" #'org-roam-tag-add
+         :desc "Remove tag"         "T" #'org-roam-tag-remove
+         :desc "Visit node"         "v" #'org-roam-node-visit)))
+
+(use-package! websocket :after org-roam)
+
+(use-package! org-roam-ui
+  :after org-roam
+  :config
+  (setq org-roam-ui-sync-theme t
+        org-roam-ui-follow t
+        org-roam-ui-update-on-save t
+        org-roam-ui-open-on-start t
+        org-roam-mode-sections
+        (list #'org-roam-backlinks-section
+              #'org-roam-reflinks-section
+              #'org-roam-unlinked-references-section))
+
+  (map! :map org-roam-mode-map
+        :leader
+        (:prefix ("r" . "roam")
+         :desc "Open ORUI" "u" #'org-roam-ui-open)))
+
+;; Doom modules: :lang other
+(use-package! nasm-mode
+  :hook (asm-mode . nasm-mode)
+  :config
+  (setq nasm-after-mnemonic-whitespace :space))
+
+;; Doom modules: :app
+(use-package! calfw
+  :init
+  (map! :leader
+        :prefix "o"
+        (:prefix ("c" . "calendar")
+         :desc "Default calendar" "d" #'cfw:open-calendar-buffer))
+  :config
+  (setq cfw:display-calendar-holidays nil)
+
+  (custom-set-faces!
+    `(cfw:face-toolbar :background ,(doom-color 'bg))))
+
+(use-package! calfw-blocks :after calfw)
